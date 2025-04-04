@@ -1,13 +1,13 @@
 import { Collection } from "mongodb";
 import { IUser, IUserRepository } from "./types";
-import { DatabaseConnection } from "../db";
+import { Database } from "../db";
 
 export class UserRepository implements IUserRepository {
   private collection: Collection<IUser>;
 
   constructor() {
-    const connection = DatabaseConnection.getInstance();
-    this.collection = connection.db.collection<IUser>("users");
+    const connection = new Database();
+    this.collection = connection.database.collection<IUser>("users");
   }
 
   public async exists(userId: number): Promise<boolean> {

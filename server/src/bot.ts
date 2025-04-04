@@ -9,9 +9,9 @@ export default class BotInstance {
   private usersCollection: IUserRepository = new UserRepository();
   constructor() {}
 
-  public run() {
+  public async run() {
     this.registerHandlers();
-    this.bot.start();
+    await this.bot.start();
   }
 
   private registerHandlers() {
