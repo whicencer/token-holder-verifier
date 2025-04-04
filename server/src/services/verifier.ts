@@ -2,11 +2,11 @@ import { TonClient, Address, JettonMaster, JettonWallet, fromNano } from "@ton/t
 import { getHttpEndpoint } from "@orbs-network/ton-access";
 import { getEnvVariable } from "../../config/getEnvVariable";
 import { IVerifyResult } from "../types/IVerifyResult";
-import { Database } from "../../database/db";
 import dedent from "dedent";
+import { UserRepository } from "../../database/User";
 
 class Verifier {
-  private db: Database = new Database();
+  private userCollection: UserRepository = new UserRepository();
   constructor() {}
 
   public async verifyUser(userId: number, userWallet: string): Promise<IVerifyResult> {
@@ -26,7 +26,7 @@ class Verifier {
       const { jettonWallet, balanceTON } = await this.getJettonBalance(friendlyAddress, JETTON_MINTER_ADDRESS);
       
       if (jettonWallet && balanceTON >= MIN_HOLDER_BALANCE) {
-        await this.db.userUpdateVerification(userId, friendlyAddress, jettonWallet, true);
+        await this.userCollection.updateVerification(userId, friendlyAddress, jettonWallet, true);
         return {
           isVerified: true,
           message: dedent`
@@ -38,14 +38,14 @@ class Verifier {
         };
       }
   
-      await this.db.userUpdateVerification(userId, friendlyAddress, jettonWallet, false);
+      await this.userCollection.updateVerification(userId, friendlyAddress, jettonWallet, false);
       return {
         isVerified: false,
         message: "🚫 You are not a holder. Your wallet does not meet the minimum token balance requirement."
       };
     } catch (error) {
       console.error("Error verifying holder:", error);
-      await this.db.userUpdateVerification(userId, friendlyAddress, null, false);
+      await this.userCollection.updateVerification(userId, friendlyAddress, null, false);
       return {
         isVerified: false,
         message: "Error verifying holder",
