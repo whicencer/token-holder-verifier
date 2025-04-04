@@ -1,9 +1,8 @@
-import { getEnvVariable } from "./config/getEnvVariable";
-import { Database } from "./database/db";
+import { DatabaseConnection } from "./database/db";
 import BotInstance from "./src/bot";
 
 (async () => {
-  const db = new Database();
+  const db = DatabaseConnection.getInstance();
   await db.connect();
   
   const bot = new BotInstance();
