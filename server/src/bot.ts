@@ -2,11 +2,11 @@ import dedent from "dedent";
 import { Bot, Context } from "grammy";
 import { verifier } from "./services/verifier";
 import { getEnvVariable } from "../config/getEnvVariable";
-import { Database } from "../database/db";
+import { IUserRepository, UserRepository } from "../database/User";
 
 export default class BotInstance {
   private bot: Bot = new Bot(getEnvVariable("BOT_TOKEN"));
-  private db: Database = new Database();
+  private usersCollection: IUserRepository = new UserRepository();
   constructor() {}
 
   public run() {
@@ -40,7 +40,7 @@ export default class BotInstance {
     }
 
     const userId = ctx.from.id;
-    const isUserVerificated = await this.db.isUserVerificated(userId);
+    const isUserVerificated = await this.usersCollection.getVerificationStatus(userId);
     if (isUserVerificated) {
       ctx.approveChatJoinRequest(userId);
     } else {
@@ -59,12 +59,12 @@ export default class BotInstance {
       Please, click the button below to verify.
     `;
 
-    await this.db.createNewUser(
-      ctx.from.id,
-      ctx.from.username,
-      ctx.from.first_name,
-      ctx.from.last_name
-    );
+    await this.usersCollection.create({
+      userId: ctx.from.id,
+      username: ctx.from.username,
+      firstName: ctx.from.first_name,
+      lastName: ctx.from.last_name,
+    });
     ctx.reply(message, {
       reply_markup: {
         keyboard: [
