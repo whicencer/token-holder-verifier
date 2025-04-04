@@ -7,4 +7,4 @@ Users connect their TON wallet via TON Connect. If they hold a sufficient amount
 This project is built with:
 - [grammY](https://grammy.dev/) for the Telegram bot backend  
 - [React](https://react.dev/) for the client-side mini-app
-- [TypeScript](https://www.typescriptlang.org/)
+- [TypeScript](https://www.typescriptlang.org/) as a main programming language
