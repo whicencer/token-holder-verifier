@@ -10,11 +10,14 @@ export default class BotInstance {
   constructor() {}
 
   public run() {
+    this.registerHandlers();
+    this.bot.start();
+  }
+
+  private registerHandlers() {
     this.bot.command("start", this.startCommandHandler);
     this.bot.on("msg:web_app_data", this.webAppDataHandler);
     this.bot.on("chat_join_request", this.chatJoinRequestHandler);
-
-    this.bot.start();
   }
 
   private webAppDataHandler = async (ctx: Context) => {
