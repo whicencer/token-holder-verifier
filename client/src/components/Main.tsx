@@ -23,7 +23,7 @@ export function Main() {
         <div className="container-header">
           <img src="https://www.meme-arsenal.com/memes/117e089aa893130afde13d89cdfb7d1b.jpg" alt="logo" />
           <h2>Connect Wallet to verify</h2>
-          <p>To join <strong>$SIGMABOY</strong> token's whale-holders chat, you need to pass a verification</p>
+          <p>Access to the <strong>$SIGMABOY</strong> whales chat requires verification.</p>
         </div>
         <div className="button-container">
           <TonConnectButton />
