@@ -1,8 +1,12 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import dedent from "dedent";
-import { Bot, Context } from "grammy";
+import { Bot, Context, RawApi } from "grammy";
 import { verifier } from "./services/verifier";
 import { getEnvVariable } from "../config/getEnvVariable";
 import { IUserRepository, UserRepository } from "../database/User";
+import { Other } from "grammy/out/core/api";
 
 export default class BotInstance {
   private bot: Bot = new Bot(getEnvVariable("BOT_TOKEN"));
@@ -12,6 +16,39 @@ export default class BotInstance {
   public async run() {
     this.registerHandlers();
     await this.bot.start();
+  }
+
+  public async sendMessage(userId: number, message: string, options?: Other<RawApi, "sendMessage", "text" | "chat_id">) {
+    try {
+      await this.bot.api.sendMessage(userId, message, options);
+    } catch (error) {
+      console.error("Error sending message:", error);
+    }
+  }
+
+  public async kickChatMember(chatId: number, userId: number) {
+    try {
+      await this.banChatMember(chatId, userId);
+      await this.unbanChatMember(chatId, userId);
+    } catch (error) {
+      console.error("Error kicking user:", error);
+    }
+  }
+
+  public async banChatMember(chatId: number, userId: number) {
+    try {
+      await this.bot.api.banChatMember(chatId, userId);
+    } catch (error) {
+      console.error("Error kicking user:", error);
+    }
+  }
+
+  public async unbanChatMember(chatId: number, userId: number) {
+    try {
+      await this.bot.api.unbanChatMember(chatId, userId);
+    } catch (error) {
+      console.error("Error unbanning user:", error);
+    }
   }
 
   private registerHandlers() {
@@ -29,7 +66,11 @@ export default class BotInstance {
     if (data) {
       const { connectedWallet } = JSON.parse(data);
 
-      const verifyResult = await verifier.verifyUser(ctx.from.id, connectedWallet);
+      const verifyResult = await verifier.verifyWallet(ctx.from.id, connectedWallet);
+      if (verifyResult.verified) {
+        await this.usersCollection.setAttribute(ctx.from.id, "tonAddress", connectedWallet);
+        await this.usersCollection.setAttribute(ctx.from.id, "verified", true);
+      }
       await ctx.reply(verifyResult.message, { parse_mode: "Markdown" });
     }
   }
@@ -39,10 +80,13 @@ export default class BotInstance {
       return;
     }
 
+    const chatId = ctx.chat?.id;
     const userId = ctx.from.id;
-    const isUserVerificated = await this.usersCollection.getVerificationStatus(userId);
-    if (isUserVerificated) {
+    const user = await this.usersCollection.getUserById(userId);
+    if (chatId && user && user.verified) {
       ctx.approveChatJoinRequest(userId);
+      await this.sendMessage(userId, "Welcome to the group of $TOKEN whales!");
+      await this.usersCollection.setAttribute(userId, "joinedChannelId", chatId);
     } else {
       ctx.api.sendMessage(userId, "❌ You are not verified. Please verify your wallet first: /start");
       ctx.declineChatJoinRequest(userId);
@@ -55,7 +99,7 @@ export default class BotInstance {
     }
 
     const message = dedent`
-      Hello! I am a bot to verify $SIGMABOY token holders.
+      Hello! I am a bot to verify $TOKEN token holders.
       Please, click the button below to verify.
     `;
 
@@ -63,13 +107,12 @@ export default class BotInstance {
       userId: ctx.from.id,
       username: ctx.from.username,
       firstName: ctx.from.first_name,
-      lastName: ctx.from.last_name,
+      lastName: ctx.from.last_name
     });
-    ctx.reply(message, {
+    await ctx.reply(message, {
       reply_markup: {
         keyboard: [
-          // Past your web app URL here
-          [{ text: "✅ Verify", web_app: { url: "https://chicago-naturally-baseline-written.trycloudflare.com" } }],
+          [{ text: "✅ Verify", web_app: { url: getEnvVariable("MINI_APP_URL") } }],
         ],
         resize_keyboard: true
       }

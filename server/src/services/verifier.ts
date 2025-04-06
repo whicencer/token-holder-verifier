@@ -1,20 +1,24 @@
 import { TonClient, Address, JettonMaster, JettonWallet, fromNano } from "@ton/ton";
 import { getHttpEndpoint } from "@orbs-network/ton-access";
 import { getEnvVariable } from "../../config/getEnvVariable";
-import { IVerifyResult } from "../types/IVerifyResult";
 import dedent from "dedent";
 import { UserRepository } from "../../database/User";
 
+interface IVerifyResult {
+  verified: boolean;
+  message: string;
+}
+
 class Verifier {
-  private userCollection: UserRepository = new UserRepository();
+  private userRepository: UserRepository = new UserRepository();
   constructor() {}
 
-  public async verifyUser(userId: number, userWallet: string): Promise<IVerifyResult> {
-    if (!userWallet) {
+  public async verifyWallet(userId: number, walletAddress: string): Promise<IVerifyResult> {
+    if (!walletAddress) {
       throw new Error("Wallet address is required");
     }
-  
-    const friendlyAddress = Address.parse(userWallet).toString({ bounceable: false });
+
+    const friendlyTONAddress = Address.parse(walletAddress).toString({ bounceable: false });
     const MIN_HOLDER_BALANCE = Number(getEnvVariable("MIN_HOLDER_BALANCE"));
     const JETTON_MINTER_ADDRESS = getEnvVariable("JETTON_MASTER_ADDRESS");
   
@@ -23,62 +27,59 @@ class Verifier {
     }
   
     try {
-      const { jettonWallet, balanceTON } = await this.getJettonBalance(friendlyAddress, JETTON_MINTER_ADDRESS);
+      const jettonBalance = await this.getJettonBalance(friendlyTONAddress, JETTON_MINTER_ADDRESS);
       
-      if (jettonWallet && balanceTON >= MIN_HOLDER_BALANCE) {
-        await this.userCollection.updateVerification(userId, friendlyAddress, jettonWallet, true);
+      if (jettonBalance && jettonBalance >= MIN_HOLDER_BALANCE) {
         return {
-          isVerified: true,
+          verified: true,
           message: dedent`
             ✅ Congratulations! You are a verified token holder. Your wallet meets the minimum token balance requirement.
             Your link to join the group: [Join Group](https://t.me/+a5SJFUuwH7QwZTli)
-          `,
-          tokenAmount: balanceTON,
-          jettonWallet: jettonWallet
+          `
         };
       }
-  
-      await this.userCollection.updateVerification(userId, friendlyAddress, jettonWallet, false);
+
       return {
-        isVerified: false,
-        message: "🚫 You are not a holder. Your wallet does not meet the minimum token balance requirement."
+        verified: false,
+        message: dedent`
+          🚫 You are not a holder. Your wallet does not meet the minimum token balance requirement.
+          You can buy tokens [here](https://app.ston.fi/swap?ft=TON&tt=EQBlWgKnh_qbFYTXfKgGAQPxkxFsArDOSr9nlARSzydpNPwA&chartVisible=true&chartInterval=1w&ta=20)
+
+          If you believe this is a mistake, please contact @support.
+        `
       };
     } catch (error) {
       console.error("Error verifying holder:", error);
-      await this.userCollection.updateVerification(userId, friendlyAddress, null, false);
       return {
-        isVerified: false,
+        verified: false,
         message: "Error verifying holder",
       };
+    } finally {
+      await this.userRepository.setAttribute(userId, "lastCheckedAt", Date.now());
     }
   }
 
-  private async getJettonBalance(userWallet: string, jettonMinterAddress: string) {
+  private async getJettonBalance(walletAddress: string, jettonMinterAddress: string): Promise<number | null> {
     try {
       const endpoint = await getHttpEndpoint({ network: "mainnet" });
       const client = new TonClient({ endpoint, apiKey: getEnvVariable("TON_CLIENT_API_KEY") });
   
-      const userAddress = Address.parse(userWallet);
+      const userWalletAddress = Address.parse(walletAddress);
       const jettonMaster = client.open(JettonMaster.create(Address.parse(jettonMinterAddress)));
   
-      const jettonWalletAddress = await jettonMaster.getWalletAddress(userAddress);
+      const jettonWalletAddress = await jettonMaster.getWalletAddress(userWalletAddress);
       const jettonWallet = client.open(JettonWallet.create(jettonWalletAddress));
       
       const balanceNano = await jettonWallet.getBalance();
       const balance = fromNano(balanceNano);
-      const balanceNumber = Number(balance);
+      const jettonBalance = Number(balance);
   
-      return {
-        jettonWallet: jettonWalletAddress.toString(),
-        balanceTON: balanceNumber
-      };
+      return jettonBalance;
     } catch (error) {
       console.error("Error fetching jetton balance:", error);
-      return {
-        jettonWallet: null,
-        balanceTON: null,
-      };
     }
+    
+    return null;
   }
 }
 

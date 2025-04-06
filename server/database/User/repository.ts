@@ -4,15 +4,22 @@ import { Database } from "../db";
 
 export class UserRepository implements IUserRepository {
   private collection: Collection<IUser>;
-
+  private db: Database = new Database();
   constructor() {
-    const connection = new Database();
-    this.collection = connection.database.collection<IUser>("users");
+    this.collection = this.db.database.collection<IUser>("users");
   }
 
-  public async exists(userId: number): Promise<boolean> {
+  public async exists(userId: number, throwError: boolean = false): Promise<boolean> {
     const user = await this.collection.findOne({ userId });
-    return !!user;
+    
+    if (user) {
+      return true;
+    } else {
+      if (throwError) {
+        throw new Error(`User with ID ${userId} does not exist`);
+      }
+      return false;
+    }
   }
 
   public async create(
@@ -26,10 +33,9 @@ export class UserRepository implements IUserRepository {
     const newUserData = {
       ...userData,
       tonAddress: null,
-      jettonWalletAddress: null,
       verified: false,
       lastCheckedAt: null,
-      
+      joinedChannelId: null,
       createdAt: Date.now(),
     };
 
@@ -39,28 +45,20 @@ export class UserRepository implements IUserRepository {
     }
   }
 
-  public async updateVerification(
-    userId: number,
-    tonAddress: string,
-    jettonWalletAddress: string | null,
-    verified: boolean
-  ): Promise<void> {
-    await this.collection.updateOne(
-      { userId },
-      {
-        $set: {
-          verified,
-          tonAddress,
-          jettonWalletAddress,
-          lastCheckedAt: Date.now(),
-        }
-      }
-    );
+  public async setAttribute(userId: number, key: string, value: any): Promise<void> {
+    await this.exists(userId, true);
+    await this.collection.updateOne({ userId }, { $set: { [key]: value } });
   }
 
-  public async getVerificationStatus(userId: number): Promise<boolean> {
-    const user = await this.collection.findOne({ userId });
+  public async getUserById(userId: number): Promise<IUser | null> {
+    return await this.collection.findOne({ userId });
+  }
 
-    return user?.verified ?? false;
+  public async getRecentCheckedUsersBatch(batchAmount: number): Promise<IUser[]> {
+    return await this.collection
+      .find({ verified: true, tonAddress: { $ne: null } })
+      .sort({ lastCheckedAt: 1 })
+      .limit(batchAmount)
+      .toArray();
   }
 }
