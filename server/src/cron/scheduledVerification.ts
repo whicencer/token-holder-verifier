@@ -18,7 +18,7 @@ export const scheduledVerificationJob = new CronJob(
 						const { message, verified } = await verifier.verifyWallet(user.userId, user.tonAddress);
 						if (!verified && user.joinedChannelId) {
 							await bot.kickChatMember(user.joinedChannelId, user.userId);
-							await bot.sendMessage(user.userId, `${message} \n\n You were kicked from the group.`);
+							await bot.sendMessage(user.userId, `${message} \n\n You were kicked from the group.`, { parse_mode: "Markdown" });
 							await userRepository.setAttribute(user.userId, "verified", false);
 						}
 					}

@@ -1,9 +1,10 @@
 import 'dotenv/config';
 
-export function getEnvVariable(variable: string) {
-  if (!process.env[variable]) {
+export function getEnvVariable(variable: string): string {
+  const value = process.env[variable];
+  if (!value) {
     throw new Error(`Missing environment variable: ${variable}`);
   }
-
-  return process.env[variable];
+  
+  return value;
 }

@@ -20,7 +20,7 @@ export default class BotInstance {
 
   public async sendMessage(userId: number, message: string, options?: Other<RawApi, "sendMessage", "text" | "chat_id">) {
     try {
-      await this.bot.api.sendMessage(userId, message, options);
+      await this.bot.api.sendMessage(userId, message, { link_preview_options: { is_disabled: true }, ...options });
     } catch (error) {
       console.error("Error sending message:", error);
     }
@@ -85,7 +85,7 @@ export default class BotInstance {
     const user = await this.usersCollection.getUserById(userId);
     if (chatId && user && user.verified) {
       ctx.approveChatJoinRequest(userId);
-      await this.sendMessage(userId, "Welcome to the group of $TOKEN whales!");
+      await this.sendMessage(userId, `Welcome to the group of $${getEnvVariable("TOKEN_TITLE")} whales!`);
       await this.usersCollection.setAttribute(userId, "joinedChannelId", chatId);
     } else {
       ctx.api.sendMessage(userId, "❌ You are not verified. Please verify your wallet first: /start");
@@ -99,7 +99,7 @@ export default class BotInstance {
     }
 
     const message = dedent`
-      Hello! I am a bot to verify $TOKEN token holders.
+      Hello! I am a bot to verify $${getEnvVariable("TOKEN_TITLE")} token holders.
       Please, click the button below to verify.
     `;
 
