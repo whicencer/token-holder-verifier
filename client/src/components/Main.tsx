@@ -21,9 +21,9 @@ export function Main() {
     <main className="main">
       <div className="container">
         <div className="container-header">
-          <img src="https://www.meme-arsenal.com/memes/117e089aa893130afde13d89cdfb7d1b.jpg" alt="logo" />
+          <img src={import.meta.env.VITE_TOKEN_IMAGE_URL} alt="logo" />
           <h2>Connect Wallet to verify</h2>
-          <p>Access to the <strong>$SIGMABOY</strong> whales chat requires verification.</p>
+          <p>Access to the <strong>${import.meta.env.VITE_TOKEN_TITLE}</strong> whales chat requires verification.</p>
         </div>
         <div className="button-container">
           <TonConnectButton />
@@ -33,7 +33,7 @@ export function Main() {
         <div className="footer__links">
           <a href="https://t.me/deniel85">Telegram</a>
           <a href="https://t.me/deniel85">Twitter</a>
-          <a href="https://t.me/deniel85">DEX Screener</a>
+          <a href="https://t.me/deniel85">Ston.Fi</a>
         </div>
       </footer>
     </main>
