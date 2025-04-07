@@ -10,7 +10,7 @@ const limiter = new Bottleneck({
 });
 
 export const scheduledVerificationJob = new CronJob(
-	'*/30 * * * * *',
+	'0 */30 * * * *',
 	async () => {
 		try {
 			const bot = new BotInstance();
