@@ -8,3 +8,6 @@ This project is built with:
 - [grammY](https://grammy.dev/) for the Telegram bot backend  
 - [React](https://react.dev/) for the client-side mini-app
 - [TypeScript](https://www.typescriptlang.org/) as a main programming language
+
+## Developer
+If you have any questions about the project, you can write me in [Telegram](https://t.me/whicencer)
