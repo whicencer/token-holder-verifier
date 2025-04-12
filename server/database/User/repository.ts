@@ -91,4 +91,12 @@ export class UserRepository implements IUserRepository {
 
     return result.length > 0 ? Math.round(result[0].total) : 0;
   }
+
+  public async getTopHolders(limit: number) {
+    return await this.collection
+      .find({ jettonBalance: { $ne: null } })
+      .sort({ jettonBalance: -1 })
+      .limit(limit)
+      .toArray();
+  }
 }

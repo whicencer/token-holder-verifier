@@ -34,4 +34,5 @@ export interface IUserRepository {
   getTotalVerifiedUsers(): Promise<number>;
   getTotalConnectedWallets(): Promise<number>;
   getTotalUsersJoinedChannels(): Promise<number>;
+  getTopHolders(limit: number): Promise<IUser[]>;
 }

@@ -5,8 +5,11 @@ import BotInstance from '../bot';
 import Bottleneck from 'bottleneck';
 
 const limiter = new Bottleneck({
-	maxConcurrent: 1,
-	minTime: 200
+  maxConcurrent: 5,
+  minTime: 100,
+  reservoir: 10,
+  reservoirRefreshAmount: 10,
+  reservoirRefreshInterval: 1000
 });
 
 export const scheduledVerificationJob = new CronJob(

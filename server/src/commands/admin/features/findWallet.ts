@@ -1,14 +1,11 @@
-import { Context } from "grammy";
 import { Conversation } from "@grammyjs/conversations";
-import { HydrateFlavor } from "@grammyjs/hydrate";
 import dedent from "dedent";
 import { BotContext } from "../../../types/BotContext";
 import { IUserRepository, UserRepository } from "../../../../database/User";
 import { getEnvVariable } from "../../../../config/getEnvVariable";
+import { ConversationContext } from "../../../types/ConversationContext";
 
-type MyConversationContext = HydrateFlavor<Context>;
-
-export async function findWalletConversation(conversation: Conversation<BotContext, MyConversationContext>, ctx: MyConversationContext) {
+export async function findWalletConversation(conversation: Conversation<BotContext, ConversationContext>, ctx: ConversationContext) {
   const usersCollection: IUserRepository = new UserRepository();
   const menu = conversation.menu("findWalletConversationMenu")
     .text("❌ Cancel", async ctx => {

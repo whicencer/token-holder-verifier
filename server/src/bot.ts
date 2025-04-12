@@ -12,6 +12,8 @@ import { BotContext } from "./types/BotContext";
 import { hydrate } from "@grammyjs/hydrate";
 import { conversations, createConversation } from "@grammyjs/conversations";
 import { findWalletConversation } from "./commands/admin/features/findWallet";
+import { sendMailingConversation } from "./commands/admin/features/sendMailing";
+import { MessageEntity } from "grammy/types";
 
 export default class BotInstance {
   private bot = new Bot<BotContext>(getEnvVariable("BOT_TOKEN"));
@@ -34,6 +36,7 @@ export default class BotInstance {
     this.bot
       .use(conversations())
       .use(createConversation(findWalletConversation, { plugins: [hydrate()] }))
+      .use(createConversation(sendMailingConversation, { plugins: [hydrate()] }))
       .use(adminMenu);
     this.registerHandlers();
     await this.bot.start();
@@ -44,6 +47,14 @@ export default class BotInstance {
       await this.bot.api.sendMessage(userId, message, { link_preview_options: { is_disabled: true }, ...options });
     } catch (error) {
       console.error("Error sending message:", error);
+    }
+  }
+
+  public async sendPhoto(userId: number, photoFileId: string, caption: { text: string; entities: MessageEntity[] }) {
+    try {
+      await this.bot.api.sendPhoto(userId, photoFileId, { caption: caption.text, caption_entities: caption.entities });
+    } catch (error) {
+      console.error("Error sending photo:", error);
     }
   }
 
