@@ -1,19 +1,40 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-import dedent from "dedent";
-import { Bot, Context, RawApi } from "grammy";
+import { Bot, RawApi } from "grammy";
 import { verifier } from "./services/verifier";
 import { getEnvVariable } from "../config/getEnvVariable";
 import { IUserRepository, UserRepository } from "../database/User";
 import { Other } from "grammy/out/core/api";
+import { commandsList } from "./commands/commands";
+import { adminMenu } from "./commands/admin/menu";
+import { BotContext } from "./types/BotContext";
+import { hydrate } from "@grammyjs/hydrate";
+import { conversations, createConversation } from "@grammyjs/conversations";
+import { findWalletConversation } from "./commands/admin/features/findWallet";
 
 export default class BotInstance {
-  private bot: Bot = new Bot(getEnvVariable("BOT_TOKEN"));
+  private bot = new Bot<BotContext>(getEnvVariable("BOT_TOKEN"));
   private usersCollection: IUserRepository = new UserRepository();
   constructor() {}
 
+  private registerCommandHandlers() {
+    Object.entries(commandsList).forEach(([command, handlers]) => {
+      this.bot.command(command, ...handlers);
+    });
+  }
+
+  private registerHandlers() {
+    this.registerCommandHandlers();
+    this.bot.on("msg:web_app_data", this.webAppDataHandler);
+    this.bot.on("chat_join_request", this.chatJoinRequestHandler);
+  }
+
   public async run() {
+    this.bot
+      .use(conversations())
+      .use(createConversation(findWalletConversation, { plugins: [hydrate()] }))
+      .use(adminMenu);
     this.registerHandlers();
     await this.bot.start();
   }
@@ -51,13 +72,7 @@ export default class BotInstance {
     }
   }
 
-  private registerHandlers() {
-    this.bot.command("start", this.startCommandHandler);
-    this.bot.on("msg:web_app_data", this.webAppDataHandler);
-    this.bot.on("chat_join_request", this.chatJoinRequestHandler);
-  }
-
-  private webAppDataHandler = async (ctx: Context) => {
+  private webAppDataHandler = async (ctx: BotContext) => {
     if (!ctx.from) {
       return;
     }
@@ -67,15 +82,26 @@ export default class BotInstance {
       const { connectedWallet } = JSON.parse(data);
 
       const verifyResult = await verifier.verifyWallet(ctx.from.id, connectedWallet);
-      if (verifyResult.verified) {
-        await this.usersCollection.setAttribute(ctx.from.id, "tonAddress", connectedWallet);
-        await this.usersCollection.setAttribute(ctx.from.id, "verified", true);
+
+      if (verifyResult.walletAddress) {
+        const existingUser = await this.usersCollection.findByTonAddress(verifyResult.walletAddress);
+        
+        if (existingUser) {
+          await ctx.reply("This TON wallet is already linked to another user 🚫");
+          return;
+        }
       }
+
+      if (verifyResult.verified) {
+        await this.usersCollection.setAttribute(ctx.from.id, "verified", true);
+        await this.usersCollection.setAttribute(ctx.from.id, "jettonBalance", verifyResult.jettonBalance);
+      }
+      await this.usersCollection.setAttribute(ctx.from.id, "tonAddress", verifyResult.walletAddress);
       await ctx.reply(verifyResult.message, { parse_mode: "Markdown" });
     }
   }
 
-  private chatJoinRequestHandler = async (ctx: Context) => {
+  private chatJoinRequestHandler = async (ctx: BotContext) => {
     if (!ctx.from) {
       return;
     }
@@ -91,31 +117,5 @@ export default class BotInstance {
       ctx.api.sendMessage(userId, "❌ You are not verified. Please verify your wallet first: /start");
       ctx.declineChatJoinRequest(userId);
     }
-  }
-
-  private startCommandHandler = async (ctx: Context) => {
-    if (!ctx.from) {
-      return;
-    }
-
-    const message = dedent`
-      Hello! I am a bot to verify $${getEnvVariable("TOKEN_TITLE")} token holders.
-      Please, click the button below to verify.
-    `;
-
-    await this.usersCollection.create({
-      userId: ctx.from.id,
-      username: ctx.from.username,
-      firstName: ctx.from.first_name,
-      lastName: ctx.from.last_name
-    });
-    await ctx.reply(message, {
-      reply_markup: {
-        keyboard: [
-          [{ text: "✅ Verify", web_app: { url: getEnvVariable("MINI_APP_URL") } }],
-        ],
-        resize_keyboard: true
-      }
-    });
   }
 }

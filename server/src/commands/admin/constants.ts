@@ -1,0 +1,1 @@
+export const ADMIN_MENU_ID = "admin_menu";

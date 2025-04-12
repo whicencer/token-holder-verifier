@@ -7,6 +7,8 @@ import { UserRepository } from "../../database/User";
 interface IVerifyResult {
   verified: boolean;
   message: string;
+  walletAddress?: string;
+  jettonBalance?: number;
 }
 
 class Verifier {
@@ -35,7 +37,9 @@ class Verifier {
           message: dedent`
             ✅ Congratulations! You are a verified token holder. Your wallet meets the minimum token balance requirement.
             Your link to join the group: [Join Group](https://t.me/+a5SJFUuwH7QwZTli)
-          `
+          `,
+          walletAddress: friendlyTONAddress,
+          jettonBalance
         };
       }
 
@@ -46,13 +50,14 @@ class Verifier {
           You can buy tokens [here](https://app.ston.fi/swap?ft=TON&tt=EQBlWgKnh_qbFYTXfKgGAQPxkxFsArDOSr9nlARSzydpNPwA&chartVisible=true&chartInterval=1w&ta=20)
 
           If you believe this is a mistake, please contact @support.
-        `
+        `,
+        walletAddress: friendlyTONAddress,
       };
     } catch (error) {
       console.error("Error verifying holder:", error);
       return {
         verified: false,
-        message: "Error verifying holder",
+        message: "Error verifying holder"
       };
     } finally {
       await this.userRepository.setAttribute(userId, "lastCheckedAt", Date.now());
